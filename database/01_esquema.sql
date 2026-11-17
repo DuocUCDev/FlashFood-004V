@@ -1,12 +1,13 @@
 -- FlashFood — Operación 13:00
 -- Esquema de la base de datos para la persistencia MySQL.
 --
--- Uso:
---   mysql -u root -p < database/01_esquema.sql
---   mysql -u root -p < database/02_datos_ejemplo.sql
+-- Uso con XAMPP (MySQL iniciado): importar este archivo y luego 02_datos_ejemplo.sql
+-- desde phpMyAdmin (pestaña Importar), o por terminal:
+--   mysql -u root < database/01_esquema.sql
+--   mysql -u root < database/02_datos_ejemplo.sql
 --
 -- ATENCIÓN: este script borra y vuelve a crear las tablas de FlashFood.
--- Compatible con MySQL 8.0.16+ y MariaDB 10.4+ (versiones anteriores ignoran los CHECK).
+-- Probado con MariaDB 10.4 (XAMPP). También funciona en MySQL 8.0.16+.
 
 CREATE DATABASE IF NOT EXISTS flashfood
   CHARACTER SET utf8mb4

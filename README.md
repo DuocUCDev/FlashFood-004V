@@ -28,20 +28,30 @@ flashfood-demo
 
 La aplicación guarda en archivos JSON (por defecto) o en una base de datos MySQL. Ambas opciones cumplen el mismo contrato (`Repositorio`), así que el modelo y las pantallas no cambian.
 
-**1. Crear la base de datos y cargar los datos de ejemplo**
+**1. Crear la base de datos y cargar los datos de ejemplo (XAMPP)**
+
+Abre el panel de XAMPP e inicia **MySQL**. Luego carga los dos scripts, en orden, de una de estas formas:
+
+- **phpMyAdmin** (`http://localhost/phpmyadmin`, con Apache iniciado): pestaña **Importar** → elegir `database/01_esquema.sql` → Continuar. Repetir con `database/02_datos_ejemplo.sql`.
+- **Terminal**, desde la carpeta del repositorio:
 
 ```bash
-mysql -u root -p < database/01_esquema.sql
-mysql -u root -p < database/02_datos_ejemplo.sql
+# Windows (cmd, no PowerShell)
+C:\xampp\mysql\bin\mysql.exe -u root < database\01_esquema.sql
+C:\xampp\mysql\bin\mysql.exe -u root < database\02_datos_ejemplo.sql
+
+# macOS
+/Applications/XAMPP/xamppfiles/bin/mysql -u root < database/01_esquema.sql
+/Applications/XAMPP/xamppfiles/bin/mysql -u root < database/02_datos_ejemplo.sql
 ```
 
-`01_esquema.sql` crea la base `flashfood` y sus tablas (si ya existen, las borra y las vuelve a crear). `02_datos_ejemplo.sql` deja 7 productos, 4 clientes, 3 repartidores y un pedido en cada estado. Funcionan en MySQL 8.0.16+ y en MariaDB 10.4+ (XAMPP).
+Si tu `root` tiene contraseña, agrega `-p`.
 
-Si no tienes MySQL instalado, `docker compose up -d` levanta uno en el puerto 3306 con el esquema y los datos ya cargados (usuario `flashfood`, contraseña `flashfood`).
+`01_esquema.sql` crea la base `flashfood` y sus tablas (si ya existen, las borra y las vuelve a crear). `02_datos_ejemplo.sql` deja 7 productos, 4 clientes, 3 repartidores y un pedido en cada estado. Están probados con MariaDB 10.4, el motor que trae XAMPP; también funcionan en MySQL 8.0.16+.
 
 **2. Indicar la conexión**
 
-Desde la aplicación: pantalla **Configuración** → *Base de datos MySQL* → completar servidor, puerto, usuario, contraseña y base de datos → **Probar conexión** → **Guardar y aplicar**. El cambio se aplica sin reiniciar.
+Desde la aplicación: pantalla **Configuración** → *Base de datos MySQL* → completar servidor, puerto, usuario, contraseña y base de datos (en XAMPP: `127.0.0.1`, `3306`, `root`, sin contraseña, `flashfood`) → **Probar conexión** → **Guardar y aplicar**. El cambio se aplica sin reiniciar.
 
 A mano: copiar `config.example.ini` como `config.ini` y editarlo.
 
@@ -63,11 +73,10 @@ Los datos de JSON y de MySQL son independientes: cambiar de motor no copia regis
 
 **3. Probar contra MySQL**
 
-Las pruebas de MySQL se saltan si no se indica un servidor. Usan bases propias (`flashfood_test`) y no tocan `flashfood`:
+Las pruebas de MySQL se saltan si no se indica un servidor. Con el MySQL de XAMPP iniciado (usuario `root` sin contraseña; si tiene, agrega `FLASHFOOD_TEST_MYSQL_CONTRASENA`), usan bases propias (`flashfood_test`) y no tocan `flashfood`:
 
 ```bash
-FLASHFOOD_TEST_MYSQL_HOST=127.0.0.1 FLASHFOOD_TEST_MYSQL_USUARIO=root FLASHFOOD_TEST_MYSQL_CONTRASENA=flashfood \
-  python -m unittest discover -s tests -v
+FLASHFOOD_TEST_MYSQL_HOST=127.0.0.1 python -m unittest discover -s tests -v
 ```
 
 ## Pantallas
