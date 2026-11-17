@@ -15,6 +15,7 @@ MODULOS = (
     ("pagos", "Pagos"),
     ("repartidores", "Repartidores"),
     ("seguimiento", "Seguimiento"),
+    ("configuracion", "Configuración"),
 )
 
 

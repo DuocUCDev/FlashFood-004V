@@ -4,17 +4,22 @@ import json
 from pathlib import Path
 
 from flashfood.modelo.errores import PersistenciaError
+from flashfood.persistencia.repositorio import Repositorio
 
 
-class RepositorioJSON:
+class RepositorioJSON(Repositorio):
     def __init__(self, directorio: str | Path):
+        super().__init__()
         self.directorio = Path(directorio)
-        self.advertencias: list[str] = []
         self._archivos_danados: set[str] = set()
         try:
             self.directorio.mkdir(parents=True, exist_ok=True)
         except OSError as error:
             raise PersistenciaError(f"No se pudo preparar la carpeta de datos: {error}") from error
+
+    @property
+    def descripcion(self) -> str:
+        return f"JSON ({self.directorio})"
 
     def cargar_lista(self, nombre: str) -> list:
         datos = self._leer(nombre)

@@ -6,17 +6,17 @@ Las ventanas no viven aquí: esta clase solo aplica reglas y usa el repositorio.
 from uuid import uuid4
 
 from flashfood.modelo.cliente import Cliente
-from flashfood.modelo.errores import ReglaNegocioError
+from flashfood.modelo.errores import PersistenciaError, ReglaNegocioError
 from flashfood.modelo.pago import MetodoPago, ResultadoPago
 from flashfood.modelo.pedido import EstadoPedido, Pedido
 from flashfood.modelo.producto import Bebida, Comida, Producto, producto_desde_diccionario
 from flashfood.modelo.repartidor import Repartidor
 from flashfood.modelo.validacion import exigir_entero, texto_obligatorio
-from flashfood.persistencia.repositorio_json import RepositorioJSON
+from flashfood.persistencia.repositorio import Repositorio
 
 
 class FlashFood:
-    def __init__(self, repositorio: RepositorioJSON):
+    def __init__(self, repositorio: Repositorio):
         self._repositorio = repositorio
         self._productos: dict[str, Producto] = {}
         self._clientes: dict[str, Cliente] = {}
@@ -38,32 +38,64 @@ class FlashFood:
     def advertencias(self) -> tuple[str, ...]:
         return tuple(self._repositorio.advertencias)
 
+    @property
+    def origen_datos(self) -> str:
+        return self._repositorio.descripcion
+
     def cargar(self) -> None:
-        self._productos.clear()
-        self._clientes.clear()
-        self._repartidores.clear()
-        self._pedidos.clear()
-        for datos in self._repositorio.cargar_lista("productos"):
-            self._incorporar(producto_desde_diccionario, datos, self._productos, "Producto")
-        for datos in self._repositorio.cargar_lista("clientes"):
-            self._incorporar(Cliente.desde_diccionario, datos, self._clientes, "Cliente")
-        for datos in self._repositorio.cargar_lista("repartidores"):
-            self._incorporar(Repartidor.desde_diccionario, datos, self._repartidores, "Repartidor")
-        for datos in self._repositorio.cargar_lista("pedidos"):
-            self._incorporar(Pedido.desde_diccionario, datos, self._pedidos, "Pedido")
-        operacion = self._repositorio.cargar_objeto("operacion")
+        """Lee todo en colecciones nuevas y las adopta al final: si la lectura falla, la memoria queda como estaba."""
+        productos: dict[str, Producto] = {}
+        clientes: dict[str, Cliente] = {}
+        repartidores: dict[str, Repartidor] = {}
+        pedidos: dict[str, Pedido] = {}
+        with self._repositorio.transaccion():
+            for datos in self._repositorio.cargar_lista("productos"):
+                self._incorporar(producto_desde_diccionario, datos, productos, "Producto")
+            for datos in self._repositorio.cargar_lista("clientes"):
+                self._incorporar(Cliente.desde_diccionario, datos, clientes, "Cliente")
+            for datos in self._repositorio.cargar_lista("repartidores"):
+                self._incorporar(Repartidor.desde_diccionario, datos, repartidores, "Repartidor")
+            for datos in self._repositorio.cargar_lista("pedidos"):
+                self._incorporar(Pedido.desde_diccionario, datos, pedidos, "Pedido")
+            operacion = self._repositorio.cargar_objeto("operacion")
+            for nombre, coleccion in (
+                ("productos", productos),
+                ("clientes", clientes),
+                ("repartidores", repartidores),
+                ("pedidos", pedidos),
+            ):
+                self._repositorio.recordar(nombre, [item.a_diccionario() for item in coleccion.values()])
+        self._productos = productos
+        self._clientes = clientes
+        self._repartidores = repartidores
+        self._pedidos = pedidos
         self._hora_punta = operacion.get("hora_punta", False) is True
         self._lluvia = operacion.get("lluvia", False) is True
         self._sincronizar_repartidores()
 
     def guardar(self) -> None:
-        self._repositorio.guardar("productos", [item.a_diccionario() for item in self._productos.values()])
-        self._repositorio.guardar("clientes", [item.a_diccionario() for item in self._clientes.values()])
-        self._repositorio.guardar("repartidores", [item.a_diccionario() for item in self._repartidores.values()])
-        self._repositorio.guardar("pedidos", [item.a_diccionario() for item in self._pedidos.values()])
-        self._repositorio.guardar(
-            "operacion",
-            {"hora_punta": self._hora_punta, "lluvia": self._lluvia},
+        try:
+            with self._repositorio.transaccion():
+                for nombre, coleccion in self._colecciones():
+                    self._repositorio.guardar(nombre, [item.a_diccionario() for item in coleccion.values()])
+                self._repositorio.guardar(
+                    "operacion",
+                    {"hora_punta": self._hora_punta, "lluvia": self._lluvia},
+                )
+        except PersistenciaError:
+            # Lo que no se pudo guardar no puede quedar en memoria: se vuelve a lo último guardado.
+            try:
+                self.cargar()
+            except PersistenciaError:
+                pass
+            raise
+
+    def _colecciones(self) -> tuple[tuple[str, dict], ...]:
+        return (
+            ("productos", self._productos),
+            ("clientes", self._clientes),
+            ("repartidores", self._repartidores),
+            ("pedidos", self._pedidos),
         )
 
     def definir_condiciones(self, hora_punta: bool, lluvia: bool) -> None:

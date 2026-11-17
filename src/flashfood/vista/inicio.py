@@ -37,7 +37,7 @@ class Inicio(Pantalla):
             command=self.aplicar_condiciones,
         ).pack(anchor="w", pady=(6, 0))
 
-        self.resumen = ttk.Label(self, justify="left")
+        self.resumen = ttk.Label(self, justify="left", wraplength=760)
         self.resumen.pack(anchor="w", pady=(0, 12))
 
         acceso = ttk.LabelFrame(self, text="Módulos", padding=12)
@@ -57,6 +57,7 @@ class Inicio(Pantalla):
         self._sincronizando = False
         datos = self.controlador.resumen()
         lineas = [
+            f"Datos: {self.controlador.origen_datos}",
             f"Productos: {datos['productos']}",
             f"Clientes: {datos['clientes']}",
             f"Repartidores disponibles: {datos['disponibles']} de {datos['repartidores']}",

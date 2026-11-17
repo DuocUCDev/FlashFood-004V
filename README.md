@@ -1,6 +1,6 @@
 # FlashFood — Operación 13:00
 
-Aplicación de escritorio para administrar productos, clientes, pedidos, pagos y repartidores de FlashFood. El caso aplica abstracción, encapsulamiento, herencia y polimorfismo, con arquitectura MVC y persistencia en JSON.
+Aplicación de escritorio para administrar productos, clientes, pedidos, pagos y repartidores de FlashFood. El caso aplica abstracción, encapsulamiento, herencia y polimorfismo, con arquitectura MVC y persistencia en JSON o en MySQL.
 
 ## Ejecutar
 
@@ -15,7 +15,7 @@ flashfood
 
 En Windows: `.venv\Scripts\Activate.ps1`.
 
-La ventana abre los datos de `data/`. Cada operación vuelve a guardar productos, clientes, repartidores, pedidos y las condiciones de despacho.
+Sin configuración, la ventana abre los datos de `data/`. Cada operación vuelve a guardar productos, clientes, repartidores, pedidos y las condiciones de despacho.
 
 ```bash
 python -m unittest discover -s tests -v
@@ -24,9 +24,55 @@ flashfood-demo
 
 `flashfood-demo` recorre registro, pago rechazado, pago aprobado, preparación, despacho y entrega sin abrir ventanas.
 
+## Persistencia: JSON o MySQL
+
+La aplicación guarda en archivos JSON (por defecto) o en una base de datos MySQL. Ambas opciones cumplen el mismo contrato (`Repositorio`), así que el modelo y las pantallas no cambian.
+
+**1. Crear la base de datos y cargar los datos de ejemplo**
+
+```bash
+mysql -u root -p < database/01_esquema.sql
+mysql -u root -p < database/02_datos_ejemplo.sql
+```
+
+`01_esquema.sql` crea la base `flashfood` y sus tablas (si ya existen, las borra y las vuelve a crear). `02_datos_ejemplo.sql` deja 7 productos, 4 clientes, 3 repartidores y un pedido en cada estado. Funcionan en MySQL 8.0.16+ y en MariaDB 10.4+ (XAMPP).
+
+Si no tienes MySQL instalado, `docker compose up -d` levanta uno en el puerto 3306 con el esquema y los datos ya cargados (usuario `flashfood`, contraseña `flashfood`).
+
+**2. Indicar la conexión**
+
+Desde la aplicación: pantalla **Configuración** → *Base de datos MySQL* → completar servidor, puerto, usuario, contraseña y base de datos → **Probar conexión** → **Guardar y aplicar**. El cambio se aplica sin reiniciar.
+
+A mano: copiar `config.example.ini` como `config.ini` y editarlo.
+
+```ini
+[persistencia]
+motor = mysql          ; json | mysql
+
+[mysql]
+host = 127.0.0.1
+puerto = 3306
+usuario = root
+contrasena =
+base_datos = flashfood
+```
+
+`config.ini` es propio de cada equipo y no se sube al repositorio (la contraseña queda en texto plano). Si MySQL no responde al abrir, la aplicación avisa y trabaja con JSON para que puedas corregir la conexión.
+
+Los datos de JSON y de MySQL son independientes: cambiar de motor no copia registros de uno a otro.
+
+**3. Probar contra MySQL**
+
+Las pruebas de MySQL se saltan si no se indica un servidor. Usan bases propias (`flashfood_test`) y no tocan `flashfood`:
+
+```bash
+FLASHFOOD_TEST_MYSQL_HOST=127.0.0.1 FLASHFOOD_TEST_MYSQL_USUARIO=root FLASHFOOD_TEST_MYSQL_CONTRASENA=flashfood \
+  python -m unittest discover -s tests -v
+```
+
 ## Pantallas
 
-Inicio, Productos, Clientes, Pedidos, Detalle del pedido, Pagos, Repartidores y Seguimiento. El menú **Módulos** cambia de pantalla. Las tablas usan `ttk.Treeview` y los avisos usan `messagebox`.
+Inicio, Productos, Clientes, Pedidos, Detalle del pedido, Pagos, Repartidores, Seguimiento y Configuración. El menú **Módulos** cambia de pantalla. Las tablas usan `ttk.Treeview` y los avisos usan `messagebox`.
 
 ## Estados
 
@@ -53,10 +99,10 @@ Se puede cancelar en Creado, Pagado y En preparación. En camino y Entregado no 
 
 | Pilar | Dónde se ve |
 | --- | --- |
-| Abstracción | `Producto` y `MetodoPago` son clases abstractas (`abc`). No se instancian. |
+| Abstracción | `Producto`, `MetodoPago` y `Repositorio` son clases abstractas (`abc`). No se instancian. |
 | Encapsulamiento | El estado, el stock y el pago se cambian con métodos. No hay setters públicos. |
 | Herencia | `Comida` y `Bebida` especializan `Producto`. `PagoTarjeta`, `PagoEfectivo`, `PagoBilletera` y `PagoTransferencia` especializan `MetodoPago`. |
-| Polimorfismo | `Pedido.cobrar` llama a `procesar` sin saber qué medio concreto recibió. |
+| Polimorfismo | `Pedido.cobrar` llama a `procesar` sin saber qué medio concreto recibió. `FlashFood.guardar` llama al repositorio sin saber si es JSON o MySQL. |
 | Composición | Un `Pedido` contiene varios `DetallePedido`. |
 
 `PagoTransferencia` se agregó implementando `MetodoPago`. Las otras clases de pago no se modifican para aceptarla.
@@ -65,11 +111,14 @@ Se puede cancelar en Creado, Pagado y En preparación. En camino y Entregado no 
 
 ```text
 src/flashfood/modelo/          entidades, reglas y FlashFood
-src/flashfood/persistencia/    lectura y escritura JSON
+src/flashfood/persistencia/    contrato Repositorio, RepositorioJSON, RepositorioMySQL y la fábrica que elige
+src/flashfood/configuracion.py lectura y escritura de config.ini
 src/flashfood/controladores/   traducción de la interfaz al modelo
 src/flashfood/vista/           ventanas Tkinter y ttk
-data/                          datos de ejemplo
-tests/                         reglas, persistencia y recorrido de pantallas
+data/                          datos de ejemplo en JSON
+database/                      esquema MySQL y datos de ejemplo
+config.example.ini             plantilla de la configuración
+tests/                         reglas, persistencia (JSON y MySQL) y recorrido de pantallas
 ```
 
 El modelo no importa Tkinter. Las pantallas no deciden stock, totales ni transiciones.
