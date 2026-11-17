@@ -12,7 +12,7 @@ Modelar la Operación 13:00 con clases, encapsulamiento, abstracción, herencia,
 4. **Pagos.** Comparar `PagoTarjeta`, `PagoEfectivo` y `PagoBilletera`. Agregar una prueba con `PagoTransferencia` sin tocar las otras clases. Un rechazo no baja el stock.
 5. **Reparto y cancelación.** Asignar el mismo repartidor a dos pedidos en preparación. Cancelar uno pagado y comprobar que el stock vuelve una sola vez.
 6. **MVC y JSON.** Seguir un clic desde la vista hasta `Controlador`, `FlashFood` y `RepositorioJSON`. Cerrar y volver a abrir: el stock no se descuenta otra vez.
-7. **De JSON a MySQL.** Ejecutar `database/01_esquema.sql` y `02_datos_ejemplo.sql`, y cambiar el motor en la pantalla Configuración. Comparar `RepositorioJSON` con `RepositorioMySQL`: ambos heredan de `Repositorio` y `FlashFood` no cambió ni una regla. Revisar las llaves foráneas y por qué todo el guardado va en una transacción.
+7. **De JSON a MySQL.** Iniciar MySQL en XAMPP, importar `database/01_esquema.sql` y `02_datos_ejemplo.sql` desde phpMyAdmin, y cambiar el motor en la pantalla Configuración. Comparar `RepositorioJSON` con `RepositorioMySQL`: ambos heredan de `Repositorio` y `FlashFood` no cambió ni una regla. Revisar las llaves foráneas y por qué todo el guardado va en una transacción.
 8. **Escritorio.** Ejecutar `flashfood` y completar el flujo en las pantallas. Los `messagebox` muestran el error y la ventana sigue abierta.
 
 ## Qué mirar en la evaluación

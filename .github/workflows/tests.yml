@@ -6,20 +6,21 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     services:
+      # MariaDB 10.4 es el motor que trae XAMPP; root sin contraseña, igual que en clases.
       mysql:
-        image: mysql:8.4
+        image: mariadb:10.4
         env:
-          MYSQL_ROOT_PASSWORD: flashfood
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -pflashfood"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
           --health-interval=5s
           --health-timeout=3s
           --health-retries=20
     env:
       FLASHFOOD_TEST_MYSQL_HOST: 127.0.0.1
-      FLASHFOOD_TEST_MYSQL_CONTRASENA: flashfood
     strategy:
       matrix:
         python-version: ['3.12', '3.13']
