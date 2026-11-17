@@ -1,0 +1,26 @@
+# MySQL local para FlashFood (opcional). Solo para desarrollo: credenciales de prueba.
+#   docker compose up -d      levanta MySQL en el puerto 3306 con esquema y datos de ejemplo
+#   docker compose down -v    lo detiene y borra los datos
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: flashfood-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: flashfood
+      MYSQL_DATABASE: flashfood
+      MYSQL_USER: flashfood
+      MYSQL_PASSWORD: flashfood
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:${FLASHFOOD_MYSQL_PUERTO:-3306}:3306"
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d:ro
+      - flashfood-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pflashfood"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  flashfood-mysql:

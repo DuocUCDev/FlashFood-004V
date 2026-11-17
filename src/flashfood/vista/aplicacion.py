@@ -6,6 +6,7 @@ from tkinter import ttk
 from flashfood.controladores.controlador import Controlador
 from flashfood.vista.clientes import Clientes
 from flashfood.vista.comun import MODULOS, informar
+from flashfood.vista.configuracion import Configuracion
 from flashfood.vista.detalle import Detalle
 from flashfood.vista.inicio import Inicio
 from flashfood.vista.pagos import Pagos
@@ -50,6 +51,7 @@ class Aplicacion(tk.Tk):
             "pagos": Pagos(self._contenido, controlador),
             "repartidores": Repartidores(self._contenido, controlador),
             "seguimiento": Seguimiento(self._contenido, controlador),
+            "configuracion": Configuracion(self._contenido, controlador),
         }
         self._actual = None
         self.mostrar("inicio")
@@ -65,6 +67,7 @@ class Aplicacion(tk.Tk):
         estilo.configure("TLabelframe", background="#f4f1ea")
         estilo.configure("TLabelframe.Label", background="#f4f1ea")
         estilo.configure("TCheckbutton", background="#f4f1ea")
+        estilo.configure("TRadiobutton", background="#f4f1ea")
         estilo.configure("Titulo.TLabel", font=("Helvetica", 20, "bold"), background="#f4f1ea")
         estilo.configure("TButton", padding=6)
         estilo.configure("Nav.TButton", padding=(12, 8), anchor="w")

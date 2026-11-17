@@ -9,3 +9,6 @@ dist/
 *.json.tmp
 .data.tmp/
 .data.bak/
+
+config.ini
+config.ini.tmp

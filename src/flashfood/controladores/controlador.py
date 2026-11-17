@@ -2,18 +2,44 @@
 
 from pathlib import Path
 
-from flashfood.modelo.errores import ReglaNegocioError
+from flashfood.configuracion import Configuracion, ConfiguracionMySQL, guardar_configuracion, leer_configuracion
+from flashfood.modelo.errores import PersistenciaError, ReglaNegocioError
 from flashfood.modelo.pago import PagoBilletera, PagoEfectivo, PagoTarjeta, PagoTransferencia, ResultadoPago
 from flashfood.modelo.pedido import EstadoPedido
 from flashfood.modelo.sistema import FlashFood
-from flashfood.persistencia.repositorio_json import RepositorioJSON
-from flashfood.rutas import directorio_datos
+from flashfood.persistencia.fabrica import crear_repositorio
+from flashfood.persistencia.repositorio_mysql import RepositorioMySQL
+from flashfood.rutas import directorio_datos, ruta_configuracion
 
 
 class Controlador:
-    def __init__(self, directorio: str | Path | None = None):
+    def __init__(self, directorio: str | Path | None = None, configuracion: str | Path | None = None):
+        """Sin argumentos usa data/ y config.ini del proyecto. Con una carpeta, busca ahí su config.ini."""
         self._directorio = Path(directorio) if directorio is not None else directorio_datos()
-        self._sistema = FlashFood(RepositorioJSON(self._directorio))
+        if configuracion is not None:
+            self._ruta_configuracion = Path(configuracion)
+        elif directorio is not None:
+            self._ruta_configuracion = self._directorio / "config.ini"
+        else:
+            self._ruta_configuracion = ruta_configuracion()
+        self._avisos: list[str] = []
+        try:
+            self._configuracion = leer_configuracion(self._ruta_configuracion)
+        except (PersistenciaError, ReglaNegocioError) as error:
+            self._configuracion = Configuracion()
+            self._avisos.append(f"{error}\nSe abrió con los datos JSON.")
+        try:
+            self._sistema = self._abrir(self._configuracion)
+            self._motor_activo = self._configuracion.motor
+        except PersistenciaError as error:
+            if self._configuracion.motor == "json":
+                raise
+            # MySQL no respondió: se abre con JSON para poder corregir la configuración desde la aplicación.
+            self._sistema = self._abrir(Configuracion("json", self._configuracion.mysql))
+            self._motor_activo = "json"
+            self._avisos.append(
+                f"{error}\n\nSe abrió con los datos JSON. Corrige la conexión en la pantalla Configuración."
+            )
 
     @property
     def directorio(self) -> Path:
@@ -21,7 +47,54 @@ class Controlador:
 
     @property
     def advertencia(self) -> str:
-        return "\n".join(self._sistema.advertencias)
+        return "\n".join([*self._avisos, *self._sistema.advertencias])
+
+    @property
+    def configuracion(self) -> Configuracion:
+        """Lo que está guardado en el archivo de configuración."""
+        return self._configuracion
+
+    @property
+    def archivo_configuracion(self) -> Path:
+        return self._ruta_configuracion
+
+    @property
+    def motor_activo(self) -> str:
+        """Motor que está en uso ahora: json o mysql."""
+        return self._motor_activo
+
+    @property
+    def origen_datos(self) -> str:
+        return self._sistema.origen_datos
+
+    def probar_mysql(self, host: str, puerto: str, usuario: str, contrasena: str, base_datos: str) -> str:
+        """Prueba la conexión sin cambiar nada. Devuelve la versión del servidor."""
+        return RepositorioMySQL(self._mysql(host, puerto, usuario, contrasena, base_datos)).probar()
+
+    def aplicar_configuracion(
+        self, motor: str, host: str, puerto: str, usuario: str, contrasena: str, base_datos: str
+    ) -> None:
+        """Cambia la persistencia en uso y la deja guardada. Si falla, todo queda como estaba."""
+        if not isinstance(motor, str):
+            raise ReglaNegocioError("La persistencia debe ser json o mysql")
+        nueva = Configuracion(motor.strip().lower(), self._mysql(host, puerto, usuario, contrasena, base_datos))
+        sistema = self._abrir(nueva)
+        guardar_configuracion(self._ruta_configuracion, nueva)
+        self._sistema = sistema
+        self._configuracion = nueva
+        self._motor_activo = nueva.motor
+        self._avisos.clear()
+
+    def _abrir(self, configuracion: Configuracion) -> FlashFood:
+        return FlashFood(crear_repositorio(configuracion, self._directorio))
+
+    def _mysql(self, host: str, puerto: str, usuario: str, contrasena: str, base_datos: str) -> ConfiguracionMySQL:
+        for valor in (host, usuario, contrasena, base_datos):
+            if not isinstance(valor, str):
+                raise ReglaNegocioError("Los datos de conexión deben ser texto")
+        return ConfiguracionMySQL(
+            host.strip(), self._entero(puerto, "Puerto", 1), usuario.strip(), contrasena, base_datos.strip()
+        )
 
     @property
     def hora_punta(self) -> bool:

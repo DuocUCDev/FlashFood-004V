@@ -304,10 +304,13 @@ class PersistenciaTests(OperacionBase):
     def test_datos_de_ejemplo(self):
         raiz = Path(__file__).resolve().parents[1] / "data"
         sistema = FlashFood(RepositorioJSON(raiz))
+        # data/ cambia con el uso de la aplicación: solo se exige que cargue completa y sin avisos.
+        self.assertEqual(sistema.advertencias, ())
         self.assertEqual(sistema.obtener_producto("prod-hamburguesa").precio, 6500)
-        self.assertTrue(sistema.obtener_cliente("cli-andres").es_vip)
         self.assertEqual(sistema.obtener_producto("prod-cola").detalle, "350 ml")
-        self.assertEqual(sistema.listar_pedidos(), ())
+        self.assertTrue(sistema.listar_clientes())
+        for pedido in sistema.listar_pedidos():
+            sistema.obtener_cliente(pedido.cliente_id)
 
 
 class ControladorTests(unittest.TestCase):

@@ -1,4 +1,4 @@
-"""Ubicación de los JSON de la aplicación."""
+"""Ubicación de los JSON y de la configuración de la aplicación."""
 
 from pathlib import Path
 
@@ -12,3 +12,7 @@ def directorio_datos() -> Path:
     if (empaquetado / "productos.json").exists():
         return empaquetado
     return actual
+
+
+def ruta_configuracion() -> Path:
+    return directorio_datos().parent / "config.ini"
